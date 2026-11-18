@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>3D-фамилия с текстурой и матрицей преобразований</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="app">
+    <aside class="panel">
+      <h1>3D-объект (Фамилия)</h1>
+      <p class="sub">Python (массив вершин и матрица M) + WebGL</p>
+
+      <div class="group">
+        <label>Фамилия (RU / EN)</label>
+        <div class="row">
+          <input type="text" id="surnameInput" value="ИВАНОВ" maxlength="14" />
+          <button class="btn primary" id="buildBtn">Построить</button>
+        </div>
+      </div>
+
+      <div class="group">
+        <label>Глубина выдавливания (Z) <span id="depthVal">0.90</span></label>
+        <input type="range" id="depthSlider" min="0.2" max="2.5" step="0.1" value="0.9" />
+      </div>
+
+      <div class="group">
+        <label>Текстура поверхности</label>
+        <select id="textureSelect">
+          <option value="wood">Дерево (процедурная)</option>
+          <option value="marble">Мрамор / Камень</option>
+          <option value="brick">Кирпичная кладка</option>
+          <option value="checker">UV-сетка (шахматная)</option>
+        </select>
+        <label class="upload-btn">
+          Загрузить свою текстуру (PNG/JPG)
+          <input type="file" id="texUpload" accept="image/*" />
+        </label>
+      </div>
+
+      <div class="row" style="justify-content: space-between;">
+        <label class="check-row"><input type="checkbox" id="wireframeChk" /> Каркас</label>
+        <label class="check-row"><input type="checkbox" id="autoSpinChk" /> Автовращение</label>
+      </div>
+
+      <h2>3D-преобразования</h2>
+
+      <div class="group">
+        <label>Порядок матриц</label>
+        <select id="orderSelect">
+          <option value="TRS">M = T · Rz · Ry · Rx · S</option>
+          <option value="RTS">M = Rz · Ry · Rx · T · S</option>
+          <option value="SRT">M = S · Rz · Ry · Rx · T</option>
+        </select>
+      </div>
+
+      <div class="group">
+        <label>Перенос Tx <span id="txVal">0.00</span></label>
+        <input type="range" id="tx" min="-6" max="6" step="0.1" value="0" />
+        <label>Перенос Ty <span id="tyVal">0.00</span></label>
+        <input type="range" id="ty" min="-4" max="4" step="0.1" value="0" />
+        <label>Перенос Tz <span id="tzVal">0.00</span></label>
+        <input type="range" id="tz" min="-6" max="6" step="0.1" value="0" />
+      </div>
+
+      <div class="group">
+        <label>Поворот Rx <span id="rxVal">15°</span></label>
+        <input type="range" id="rx" min="-180" max="180" step="1" value="15" />
+        <label>Поворот Ry <span id="ryVal">-24°</span></label>
+        <input type="range" id="ry" min="-180" max="180" step="1" value="-24" />
+        <label>Поворот Rz <span id="rzVal">0°</span></label>
+        <input type="range" id="rz" min="-180" max="180" step="1" value="0" />
+      </div>
+
+      <div class="group">
+        <label>Масштаб Sx <span id="sxVal">1.00</span></label>
+        <input type="range" id="sx" min="0.2" max="2.2" step="0.05" value="1" />
+        <label>Масштаб Sy <span id="syVal">1.00</span></label>
+        <input type="range" id="sy" min="0.2" max="2.2" step="0.05" value="1" />
+        <label>Масштаб Sz <span id="szVal">1.00</span></label>
+        <input type="range" id="sz" min="0.2" max="2.2" step="0.05" value="1" />
+      </div>
+
+      <button class="btn" id="resetBtn">Сбросить (M = I)</button>
+    </aside>
+
+    <main class="viewport">
+      <div class="hud">
+        <span class="badge" id="statVerts">Вершин: 0</span>
+        <span class="badge" id="statTris">Треугольников: 0</span>
+        <span class="badge" id="glStatus">WebGL готов</span>
+      </div>
+      <canvas id="glCanvas"></canvas>
+      <div class="hud-bottom">ЛКМ — вращение камеры | Колесо — зум | Оси: X (красн.), Y (зел.), Z (син.)</div>
+    </main>
+
+    <aside class="panel right-panel">
+      <h2>Итоговая матрица преобразования M (4×4)</h2>
+      <div class="matrix-box">
+        <div class="matrix-grid" id="matrixGrid"></div>
+        <div class="formula" id="matrixFormula">v' = M · v</div>
+      </div>
+
+      <h2>Текстура</h2>
+      <canvas id="texPreviewCanvas" class="tex-preview" width="256" height="64"></canvas>
+
+      <h2>Массив координат вершин (первые 100)</h2>
+      <div class="vertex-table-wrap">
+        <table>
+          <thead>
+            <tr><th>#</th><th>X</th><th>Y</th><th>Z</th><th>U</th><th>V</th></tr>
+          </thead>
+          <tbody id="vertexTableBody"></tbody>
+        </table>
+      </div>
+      <button class="btn" id="downloadVertsBtn">Скачать весь массив вершин (.json)</button>
+    </aside>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
