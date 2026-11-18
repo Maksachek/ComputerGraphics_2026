@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Лаб1 (CMYK – RGB – HLS)</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #273449;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --radius: 14px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px 16px 40px;
+      line-height: 1.45;
+    }
+
+    .container {
+      max-width: 1240px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Шапка и предпросмотр */
+    .header-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 20px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 20px;
+      align-items: center;
+    }
+
+    @media (max-width: 820px) {
+      .header-card {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .title-block h1 {
+      font-size: 1.35rem;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .title-block p {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .preview-area {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .color-swatch-main {
+      width: 170px;
+      height: 76px;
+      border-radius: 12px;
+      border: 2px solid rgba(255, 255, 255, 0.2);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 1rem;
+      letter-spacing: 0.04em;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      transition: color 0.15s ease;
+    }
+
+    .color-swatch-main small {
+      font-weight: 500;
+      font-size: 0.72rem;
+      opacity: 0.85;
+    }
+
+    .quick-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .hex-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hex-row label {
+      font-size: 0.85rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    .hex-input {
+      width: 100px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.92rem;
+    }
+
+    .native-picker {
+      width: 36px;
+      height: 32px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: transparent;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .preset-bar {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .preset-dot {
+      width: 22px;
+      height: 22px;
+      border-radius: 6px;
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      cursor: pointer;
+      transition: transform 0.12s ease;
+    }
+
+    .preset-dot:hover {
+      transform: scale(1.15);
+    }
+
+    /* Сетка трех моделей */
+    .models-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 18px;
+    }
+
+    @media (max-width: 1024px) {
+      .models-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .model-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .model-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+    }
+
+    .model-header h2 {
+      font-size: 1.15rem;
+      font-weight: 700;
+    }
+
+    .model-badge {
+      font-size: 0.78rem;
+      color: var(--muted);
+      background: var(--surface-2);
+      padding: 3px 9px;
+      border-radius: 999px;
+    }
+
+    .section-label {
+      font-size: 0.76rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: var(--muted);
+      margin-bottom: 6px;
+      font-weight: 600;
+    }
+
+    /* Каналы: ползунок + поле ввода */
+    .channels {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .channel-row {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .channel-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .channel-name {
+      font-size: 0.88rem;
+      font-weight: 600;
+    }
+
+    .channel-name span {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 0.8rem;
+      margin-left: 4px;
+    }
+
+    .input-wrap {
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .num-input {
+      width: 68px;
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 7px;
+      padding: 4px 7px;
+      font-size: 0.88rem;
+      text-align: right;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    }
+
+    .num-input:focus, .hex-input:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    .unit {
+      font-size: 0.8rem;
+      color: var(--muted);
+      width: 14px;
+    }
+
+    /* Стилизация ползунков с динамическим фоном */
+    input[type="range"] {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 100%;
+      height: 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      outline: none;
+      cursor: pointer;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #0f172a;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+      cursor: grab;
+    }
+
+    input[type="range"]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 2px solid #0f172a;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+      cursor: grab;
+    }
+
+    /* 2D Палитра */
+    .palette-box {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .canvas-wrap {
+      position: relative;
+      width: 100%;
+      height: 148px;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      cursor: crosshair;
+      touch-action: none;
+    }
+
+    .canvas-wrap canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .picker-cursor {
+      position: absolute;
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      border: 2px solid #ffffff;
+      box-shadow: 0 0 0 1.5px #000000, 0 2px 6px rgba(0, 0, 0, 0.5);
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .palette-axes {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.76rem;
+      color: var(--muted);
+    }
+
+    .model-swatches {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 2px;
+    }
+
+    .mini-swatch {
+      flex: 1;
+      min-width: 24px;
+      height: 20px;
+      border-radius: 5px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      cursor: pointer;
+    }
+
+    .summary-code {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.82rem;
+      color: #cbd5e1;
+      text-align: center;
+      user-select: all;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Шапка -->
+    <header class="header-card">
+      <div class="title-block">
+        <h1>Цветовые модели: CMYK – RGB – HLS</h1>
+      </div>
+
+      <div class="preview-area">
+        <div class="color-swatch-main" id="mainSwatch">
+          <span id="swatchHex">#38BDF8</span>
+          <small id="swatchLabel"></small>
+        </div>
+
+        <div class="quick-controls">
+          <div class="hex-row">
+            <label for="hexInput">HEX:</label>
+            <input type="text" id="hexInput" class="hex-input" value="#38BDF8" maxlength="7" />
+            <input type="color" id="nativePicker" class="native-picker" title="Системная палитра" value="#38bdf8" />
+          </div>
+          <div class="preset-bar" id="globalPresets" title="Базовые цвета"></div>
+        </div>
+      </div>
+    </header>
+
+    <!-- Три цветовые модели -->
+    <main class="models-grid">
+      <!-- RGB -->
+      <section class="model-card" id="card-rgb">
+        <div class="model-header">
+          <h2>RGB</h2>
+        </div>
+
+        <div class="channels">
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="rgb-r-num">R <span>Red</span></label>
+              <div class="input-wrap">
+                <input type="number" id="rgb-r-num" class="num-input" min="0" max="255" step="1" />
+                <span class="unit"></span>
+              </div>
+            </div>
+            <input type="range" id="rgb-r-range" min="0" max="255" step="1" />
+          </div>
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="rgb-g-num">G <span>Green</span></label>
+              <div class="input-wrap">
+                <input type="number" id="rgb-g-num" class="num-input" min="0" max="255" step="1" />
+                <span class="unit"></span>
+              </div>
+            </div>
+            <input type="range" id="rgb-g-range" min="0" max="255" step="1" />
+          </div>
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="rgb-b-num">B <span>Blue</span></label>
+              <div class="input-wrap">
+                <input type="number" id="rgb-b-num" class="num-input" min="0" max="255" step="1" />
+                <span class="unit"></span>
+              </div>
+            </div>
+            <input type="range" id="rgb-b-range" min="0" max="255" step="1" />
+          </div>
+        </div>
+
+        <div class="palette-box">
+          <div class="canvas-wrap" id="rgb-canvas-wrap">
+            <canvas id="rgb-canvas" width="240" height="148"></canvas>
+            <div class="picker-cursor" id="rgb-cursor"></div>
+          </div>
+          <div class="palette-axes">
+            <span>← R: 0 .. 255 →</span>
+            <span>↑ G: 0 .. 255</span>
+          </div>
+          <div class="model-swatches" id="rgb-swatches"></div>
+        </div>
+
+        <div class="summary-code" id="rgb-summary">rgb(56, 189, 248)</div>
+      </section>
+
+      <!-- CMYK -->
+      <section class="model-card" id="card-cmyk">
+        <div class="model-header">
+          <h2>CMYK</h2>
+        </div>
+
+        <div class="channels">
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="cmyk-c-num">C <span>Cyan</span></label>
+              <div class="input-wrap">
+                <input type="number" id="cmyk-c-num" class="num-input" min="0" max="100" step="0.1" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <input type="range" id="cmyk-c-range" min="0" max="100" step="0.5" />
+          </div>
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="cmyk-m-num">M <span>Magenta</span></label>
+              <div class="input-wrap">
+                <input type="number" id="cmyk-m-num" class="num-input" min="0" max="100" step="0.1" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <input type="range" id="cmyk-m-range" min="0" max="100" step="0.5" />
+          </div>
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="cmyk-y-num">Y <span>Yellow</span></label>
+              <div class="input-wrap">
+                <input type="number" id="cmyk-y-num" class="num-input" min="0" max="100" step="0.1" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <input type="range" id="cmyk-y-range" min="0" max="100" step="0.5" />
+          </div>
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="cmyk-k-num">K <span>Key</span></label>
+              <div class="input-wrap">
+                <input type="number" id="cmyk-k-num" class="num-input" min="0" max="100" step="0.1" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <input type="range" id="cmyk-k-range" min="0" max="100" step="0.5" />
+          </div>
+        </div>
+
+        <div class="palette-box">
+          <div class="canvas-wrap" id="cmyk-canvas-wrap">
+            <canvas id="cmyk-canvas" width="240" height="148"></canvas>
+            <div class="picker-cursor" id="cmyk-cursor"></div>
+          </div>
+          <div class="palette-axes">
+            <span>← C: 0 .. 100% →</span>
+            <span>↑ M: 0 .. 100%</span>
+          </div>
+          <div class="model-swatches" id="cmyk-swatches"></div>
+        </div>
+
+        <div class="summary-code" id="cmyk-summary">cmyk(77%, 24%, 0%, 3%)</div>
+      </section>
+
+      <!-- HLS -->
+      <section class="model-card" id="card-hls">
+        <div class="model-header">
+          <h2>HLS</h2>
+        </div>
+
+        <div class="channels">
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="hls-h-num">H <span>Hue</span></label>
+              <div class="input-wrap">
+                <input type="number" id="hls-h-num" class="num-input" min="0" max="360" step="1" />
+                <span class="unit">°</span>
+              </div>
+            </div>
+            <input type="range" id="hls-h-range" min="0" max="360" step="1" />
+          </div>
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="hls-l-num">L <span>Lightness</span></label>
+              <div class="input-wrap">
+                <input type="number" id="hls-l-num" class="num-input" min="0" max="100" step="0.5" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <input type="range" id="hls-l-range" min="0" max="100" step="0.5" />
+          </div>
+
+          <div class="channel-row">
+            <div class="channel-top">
+              <label class="channel-name" for="hls-s-num">S <span>Saturation</span></label>
+              <div class="input-wrap">
+                <input type="number" id="hls-s-num" class="num-input" min="0" max="100" step="0.5" />
+                <span class="unit">%</span>
+              </div>
+            </div>
+            <input type="range" id="hls-s-range" min="0" max="100" step="0.5" />
+          </div>
+        </div>
+
+        <div class="palette-box">
+          <div class="canvas-wrap" id="hls-canvas-wrap">
+            <canvas id="hls-canvas" width="240" height="148"></canvas>
+            <div class="picker-cursor" id="hls-cursor"></div>
+          </div>
+          <div class="palette-axes">
+            <span>← S: 0 .. 100% →</span>
+            <span>↑ L: 0 .. 100%</span>
+          </div>
+          <div class="model-swatches" id="hls-swatches"></div>
+        </div>
+
+        <div class="summary-code" id="hls-summary">hls(199°, 60%, 93%)</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+
+    const clamp = (val, min, max) => Math.min(max, Math.max(min, val));
+    const roundTo = (val, decimals = 1) => {
+      const f = Math.pow(10, decimals);
+      return Math.round(val * f) / f;
+    };
+
+    /**
+     * RGB -> CMYK
+     */
+    function rgbToCmyk(r255, g255, b255) {
+      const r = clamp(r255, 0, 255) / 255;
+      const g = clamp(g255, 0, 255) / 255;
+      const b = clamp(b255, 0, 255) / 255;
+
+      const k = 1 - Math.max(r, g, b);
+      if (k >= 1 - 1e-9) {
+        return { c: 0, m: 0, y: 0, k: 100 };
+      }
+
+      const denom = 1 - k;
+      const c = ((1 - r - k) / denom) * 100;
+      const m = ((1 - g - k) / denom) * 100;
+      const y = ((1 - b - k) / denom) * 100;
+
+      return {
+        c: roundTo(c, 1),
+        m: roundTo(m, 1),
+        y: roundTo(y, 1),
+        k: roundTo(k * 100, 1)
+      };
+    }
+
+    /**
+     * CMYK -> RGB
+     */
+    function cmykToRgb(cPct, mPct, yPct, kPct, asFloat = false) {
+      const c = clamp(cPct, 0, 100) / 100;
+      const m = clamp(mPct, 0, 100) / 100;
+      const y = clamp(yPct, 0, 100) / 100;
+      const k = clamp(kPct, 0, 100) / 100;
+
+      const r = 255 * (1 - c) * (1 - k);
+      const g = 255 * (1 - m) * (1 - k);
+      const b = 255 * (1 - y) * (1 - k);
+
+      if (asFloat) return { r, g, b };
+      return {
+        r: Math.round(r),
+        g: Math.round(g),
+        b: Math.round(b)
+      };
+    }
+
+    /**
+     * RGB -> HLS
+     */
+    function rgbToHls(r255, g255, b255, fallbackHue = 0) {
+      const r = clamp(r255, 0, 255) / 255;
+      const g = clamp(g255, 0, 255) / 255;
+      const b = clamp(b255, 0, 255) / 255;
+
+      const max = Math.max(r, g, b);
+      const min = Math.min(r, g, b);
+      const delta = max - min;
+
+      const l = (max + min) / 2;
+      let h = fallbackHue;
+      let s = 0;
+
+      if (delta > 1e-7) {
+        s = delta / (1 - Math.abs(2 * l - 1));
+
+        if (max === r) {
+          h = 60 * (((g - b) / delta) % 6);
+        } else if (max === g) {
+          h = 60 * ((b - r) / delta + 2);
+        } else {
+          h = 60 * ((r - g) / delta + 4);
+        }
+        if (h < 0) h += 360;
+      }
+
+      return {
+        h: Math.round(h) % 360,
+        l: roundTo(l * 100, 1),
+        s: roundTo(clamp(s, 0, 1) * 100, 1)
+      };
+    }
+
+    /**
+     * HLS -> RGB
+     */
+    function hlsToRgb(hDeg, lPct, sPct, asFloat = false) {
+      const h = ((hDeg % 360) + 360) % 360;
+      const l = clamp(lPct, 0, 100) / 100;
+      const s = clamp(sPct, 0, 100) / 100;
+
+      const c = (1 - Math.abs(2 * l - 1)) * s;
+      const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
+      const m = l - c / 2;
+
+      let r1 = 0, g1 = 0, b1 = 0;
+      if (h < 60)       { r1 = c; g1 = x; b1 = 0; }
+      else if (h < 120) { r1 = x; g1 = c; b1 = 0; }
+      else if (h < 180) { r1 = 0; g1 = c; b1 = x; }
+      else if (h < 240) { r1 = 0; g1 = x; b1 = c; }
+      else if (h < 300) { r1 = x; g1 = 0; b1 = c; }
+      else              { r1 = c; g1 = 0; b1 = x; }
+
+      const r = (r1 + m) * 255;
+      const g = (g1 + m) * 255;
+      const b = (b1 + m) * 255;
+
+      if (asFloat) return { r, g, b };
+      return {
+        r: Math.round(clamp(r, 0, 255)),
+        g: Math.round(clamp(g, 0, 255)),
+        b: Math.round(clamp(b, 0, 255))
+      };
+    }
+
+    function rgbToHex(r, g, b) {
+      const toHex = (n) => clamp(Math.round(n), 0, 255).toString(16).padStart(2, "0").toUpperCase();
+      return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
+    }
+
+    function hexToRgb(hex) {
+      const clean = hex.trim().replace(/^#/, "");
+      if (!/^[0-9a-fA-F]{6}$/.test(clean)) return null;
+      return {
+        r: parseInt(clean.slice(0, 2), 16),
+        g: parseInt(clean.slice(2, 4), 16),
+        b: parseInt(clean.slice(4, 6), 16)
+      };
+    }
+
+    const state = {
+      rgb:  { r: 56, g: 189, b: 248 },
+      cmyk: { c: 77.4, m: 23.8, y: 0, k: 2.7 },
+      hls:  { h: 199, l: 59.6, s: 93.2 }
+    };
+
+    const el = {
+      mainSwatch: document.getElementById("mainSwatch"),
+      swatchHex: document.getElementById("swatchHex"),
+      swatchLabel: document.getElementById("swatchLabel"),
+      hexInput: document.getElementById("hexInput"),
+      nativePicker: document.getElementById("nativePicker"),
+
+      rgb: {
+        rNum: document.getElementById("rgb-r-num"), rRange: document.getElementById("rgb-r-range"),
+        gNum: document.getElementById("rgb-g-num"), gRange: document.getElementById("rgb-g-range"),
+        bNum: document.getElementById("rgb-b-num"), bRange: document.getElementById("rgb-b-range"),
+        canvas: document.getElementById("rgb-canvas"),
+        wrap: document.getElementById("rgb-canvas-wrap"),
+        cursor: document.getElementById("rgb-cursor"),
+        summary: document.getElementById("rgb-summary")
+      },
+      cmyk: {
+        cNum: document.getElementById("cmyk-c-num"), cRange: document.getElementById("cmyk-c-range"),
+        mNum: document.getElementById("cmyk-m-num"), mRange: document.getElementById("cmyk-m-range"),
+        yNum: document.getElementById("cmyk-y-num"), yRange: document.getElementById("cmyk-y-range"),
+        kNum: document.getElementById("cmyk-k-num"), kRange: document.getElementById("cmyk-k-range"),
+        canvas: document.getElementById("cmyk-canvas"),
+        wrap: document.getElementById("cmyk-canvas-wrap"),
+        cursor: document.getElementById("cmyk-cursor"),
+        summary: document.getElementById("cmyk-summary")
+      },
+      hls: {
+        hNum: document.getElementById("hls-h-num"), hRange: document.getElementById("hls-h-range"),
+        lNum: document.getElementById("hls-l-num"), lRange: document.getElementById("hls-l-range"),
+        sNum: document.getElementById("hls-s-num"), sRange: document.getElementById("hls-s-range"),
+        canvas: document.getElementById("hls-canvas"),
+        wrap: document.getElementById("hls-canvas-wrap"),
+        cursor: document.getElementById("hls-cursor"),
+        summary: document.getElementById("hls-summary")
+      }
+    };
+
+    function updateFromRgb(newRgb, sourceElement = null) {
+      state.rgb = {
+        r: Math.round(clamp(newRgb.r, 0, 255)),
+        g: Math.round(clamp(newRgb.g, 0, 255)),
+        b: Math.round(clamp(newRgb.b, 0, 255))
+      };
+      state.cmyk = rgbToCmyk(state.rgb.r, state.rgb.g, state.rgb.b);
+      state.hls = rgbToHls(state.rgb.r, state.rgb.g, state.rgb.b, state.hls.h);
+      renderUI(sourceElement);
+    }
+
+    function updateFromCmyk(newCmyk, sourceElement = null) {
+      state.cmyk = {
+        c: roundTo(clamp(newCmyk.c, 0, 100), 1),
+        m: roundTo(clamp(newCmyk.m, 0, 100), 1),
+        y: roundTo(clamp(newCmyk.y, 0, 100), 1),
+        k: roundTo(clamp(newCmyk.k, 0, 100), 1)
+      };
+      const floatRgb = cmykToRgb(state.cmyk.c, state.cmyk.m, state.cmyk.y, state.cmyk.k, true);
+      state.rgb = {
+        r: Math.round(floatRgb.r),
+        g: Math.round(floatRgb.g),
+        b: Math.round(floatRgb.b)
+      };
+      state.hls = rgbToHls(floatRgb.r, floatRgb.g, floatRgb.b, state.hls.h);
+      renderUI(sourceElement);
+    }
+
+    function updateFromHls(newHls, sourceElement = null) {
+      let h = Number(newHls.h);
+      if (!Number.isFinite(h)) h = 0;
+      h = clamp(h, 0, 360);
+
+      state.hls = {
+        h: Math.round(h),
+        l: roundTo(clamp(newHls.l, 0, 100), 1),
+        s: roundTo(clamp(newHls.s, 0, 100), 1)
+      };
+      const floatRgb = hlsToRgb(state.hls.h, state.hls.l, state.hls.s, true);
+      state.rgb = {
+        r: Math.round(clamp(floatRgb.r, 0, 255)),
+        g: Math.round(clamp(floatRgb.g, 0, 255)),
+        b: Math.round(clamp(floatRgb.b, 0, 255))
+      };
+      state.cmyk = rgbToCmyk(floatRgb.r, floatRgb.g, floatRgb.b);
+      renderUI(sourceElement);
+    }
+
+    function setInputValue(input, val, sourceElement) {
+      if (document.activeElement === input && sourceElement === input) return;
+      input.value = val;
+    }
+
+    function renderUI(sourceElement = null) {
+      const { r, g, b } = state.rgb;
+      const { c, m, y, k } = state.cmyk;
+      const { h, l, s } = state.hls;
+      const hex = rgbToHex(r, g, b);
+
+      // Шапка и предпросмотр
+      el.mainSwatch.style.backgroundColor = `rgb(${r}, ${g}, ${b})`;
+      const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+      el.mainSwatch.style.color = luminance > 0.58 ? "#0f172a" : "#ffffff";
+      el.swatchHex.textContent = hex;
+      if (document.activeElement !== el.hexInput) el.hexInput.value = hex;
+      el.nativePicker.value = hex.toLowerCase();
+
+      // --- RGB ---
+      setInputValue(el.rgb.rNum, r, sourceElement);
+      setInputValue(el.rgb.gNum, g, sourceElement);
+      setInputValue(el.rgb.bNum, b, sourceElement);
+      el.rgb.rRange.value = r;
+      el.rgb.gRange.value = g;
+      el.rgb.bRange.value = b;
+
+      el.rgb.rRange.style.background = `linear-gradient(to right, rgb(0,${g},${b}), rgb(255,${g},${b}))`;
+      el.rgb.gRange.style.background = `linear-gradient(to right, rgb(${r},0,${b}), rgb(${r},255,${b}))`;
+      el.rgb.bRange.style.background = `linear-gradient(to right, rgb(${r},${g},0), rgb(${r},${g},255))`;
+      el.rgb.summary.textContent = `rgb(${r}, ${g}, ${b})`;
+
+      // --- CMYK ---
+      setInputValue(el.cmyk.cNum, c, sourceElement);
+      setInputValue(el.cmyk.mNum, m, sourceElement);
+      setInputValue(el.cmyk.yNum, y, sourceElement);
+      setInputValue(el.cmyk.kNum, k, sourceElement);
+      el.cmyk.cRange.value = c;
+      el.cmyk.mRange.value = m;
+      el.cmyk.yRange.value = y;
+      el.cmyk.kRange.value = k;
+
+      const c0 = cmykToRgb(0, m, y, k), c1 = cmykToRgb(100, m, y, k);
+      const m0 = cmykToRgb(c, 0, y, k), m1 = cmykToRgb(c, 100, y, k);
+      const y0 = cmykToRgb(c, m, 0, k), y1 = cmykToRgb(c, m, 100, k);
+      const k0 = cmykToRgb(c, m, y, 0), k1 = cmykToRgb(c, m, y, 100);
+
+      el.cmyk.cRange.style.background = `linear-gradient(to right, rgb(${c0.r},${c0.g},${c0.b}), rgb(${c1.r},${c1.g},${c1.b}))`;
+      el.cmyk.mRange.style.background = `linear-gradient(to right, rgb(${m0.r},${m0.g},${m0.b}), rgb(${m1.r},${m1.g},${m1.b}))`;
+      el.cmyk.yRange.style.background = `linear-gradient(to right, rgb(${y0.r},${y0.g},${y0.b}), rgb(${y1.r},${y1.g},${y1.b}))`;
+      el.cmyk.kRange.style.background = `linear-gradient(to right, rgb(${k0.r},${k0.g},${k0.b}), rgb(${k1.r},${k1.g},${k1.b}))`;
+      el.cmyk.summary.textContent = `cmyk(${Math.round(c)}%, ${Math.round(m)}%, ${Math.round(y)}%, ${Math.round(k)}%)`;
+
+      // --- HLS ---
+      setInputValue(el.hls.hNum, h, sourceElement);
+      setInputValue(el.hls.lNum, l, sourceElement);
+      setInputValue(el.hls.sNum, s, sourceElement);
+      el.hls.hRange.value = h;
+      el.hls.lRange.value = l;
+      el.hls.sRange.value = s;
+
+      el.hls.hRange.style.background =
+        "linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)";
+
+      const lMid = hlsToRgb(h, 50, s);
+      el.hls.lRange.style.background =
+        `linear-gradient(to right, #000000 0%, rgb(${lMid.r},${lMid.g},${lMid.b}) 50%, #ffffff 100%)`;
+
+      const s0 = hlsToRgb(h, l, 0), s1 = hlsToRgb(h, l, 100);
+      el.hls.sRange.style.background =
+        `linear-gradient(to right, rgb(${s0.r},${s0.g},${s0.b}), rgb(${s1.r},${s1.g},${s1.b}))`;
+
+      el.hls.summary.textContent = `hls(${Math.round(h)}°, ${Math.round(l)}%, ${Math.round(s)}%)`;
+
+      // --- Перерисовка 2D-палитр и курсоров ---
+      drawRgbPalette(b);
+      el.rgb.cursor.style.left = `${(r / 255) * 100}%`;
+      el.rgb.cursor.style.top = `${(1 - g / 255) * 100}%`;
+
+      drawCmykPalette(y, k);
+      el.cmyk.cursor.style.left = `${c}%`;
+      el.cmyk.cursor.style.top = `${100 - m}%`;
+
+      drawHlsPalette(h);
+      el.hls.cursor.style.left = `${s}%`;
+      el.hls.cursor.style.top = `${100 - l}%`;
+    }
+
+    function drawRgbPalette(fixedB) {
+      const canvas = el.rgb.canvas;
+      const ctx = canvas.getContext("2d");
+      const { width, height } = canvas;
+      const img = ctx.createImageData(width, height);
+      const data = img.data;
+      const b = Math.round(fixedB);
+
+      for (let py = 0; py < height; py++) {
+        const g = Math.round((1 - py / (height - 1)) * 255);
+        for (let px = 0; px < width; px++) {
+          const r = Math.round((px / (width - 1)) * 255);
+          const idx = (py * width + px) * 4;
+          data[idx] = r;
+          data[idx + 1] = g;
+          data[idx + 2] = b;
+          data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    function drawCmykPalette(fixedY, fixedK) {
+      const canvas = el.cmyk.canvas;
+      const ctx = canvas.getContext("2d");
+      const { width, height } = canvas;
+      const img = ctx.createImageData(width, height);
+      const data = img.data;
+
+      const yFactor = 1 - fixedY / 100;
+      const kFactor = 1 - fixedK / 100;
+      const bVal = Math.round(255 * yFactor * kFactor);
+
+      for (let py = 0; py < height; py++) {
+        const m = 1 - py / (height - 1);
+        const gVal = Math.round(255 * (1 - m) * kFactor);
+        for (let px = 0; px < width; px++) {
+          const c = px / (width - 1);
+          const rVal = Math.round(255 * (1 - c) * kFactor);
+          const idx = (py * width + px) * 4;
+          data[idx] = rVal;
+          data[idx + 1] = gVal;
+          data[idx + 2] = bVal;
+          data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    function drawHlsPalette(fixedH) {
+      const canvas = el.hls.canvas;
+      const ctx = canvas.getContext("2d");
+      const { width, height } = canvas;
+      const img = ctx.createImageData(width, height);
+      const data = img.data;
+
+      for (let py = 0; py < height; py++) {
+        const l = (1 - py / (height - 1)) * 100;
+        for (let px = 0; px < width; px++) {
+          const s = (px / (width - 1)) * 100;
+          const rgb = hlsToRgb(fixedH, l, s);
+          const idx = (py * width + px) * 4;
+          data[idx] = rgb.r;
+          data[idx + 1] = rgb.g;
+          data[idx + 2] = rgb.b;
+          data[idx + 3] = 255;
+        }
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    function bindRangeAndNumber(rangeEl, numEl, min, max, onChange) {
+      rangeEl.addEventListener("input", () => {
+        onChange(parseFloat(rangeEl.value), rangeEl);
+      });
+
+      numEl.addEventListener("input", () => {
+        if (numEl.value === "" || numEl.value === "-") return;
+        const parsed = parseFloat(numEl.value);
+        if (!Number.isNaN(parsed)) {
+          onChange(clamp(parsed, min, max), numEl);
+        }
+      });
+
+      numEl.addEventListener("blur", () => {
+        const parsed = parseFloat(numEl.value);
+        onChange(Number.isNaN(parsed) ? min : clamp(parsed, min, max), null);
+      });
+    }
+
+    // RGB
+    bindRangeAndNumber(el.rgb.rRange, el.rgb.rNum, 0, 255, (v, src) => updateFromRgb({ ...state.rgb, r: v }, src));
+    bindRangeAndNumber(el.rgb.gRange, el.rgb.gNum, 0, 255, (v, src) => updateFromRgb({ ...state.rgb, g: v }, src));
+    bindRangeAndNumber(el.rgb.bRange, el.rgb.bNum, 0, 255, (v, src) => updateFromRgb({ ...state.rgb, b: v }, src));
+
+    // CMYK
+    bindRangeAndNumber(el.cmyk.cRange, el.cmyk.cNum, 0, 100, (v, src) => updateFromCmyk({ ...state.cmyk, c: v }, src));
+    bindRangeAndNumber(el.cmyk.mRange, el.cmyk.mNum, 0, 100, (v, src) => updateFromCmyk({ ...state.cmyk, m: v }, src));
+    bindRangeAndNumber(el.cmyk.yRange, el.cmyk.yNum, 0, 100, (v, src) => updateFromCmyk({ ...state.cmyk, y: v }, src));
+    bindRangeAndNumber(el.cmyk.kRange, el.cmyk.kNum, 0, 100, (v, src) => updateFromCmyk({ ...state.cmyk, k: v }, src));
+
+    // HLS
+    bindRangeAndNumber(el.hls.hRange, el.hls.hNum, 0, 360, (v, src) => updateFromHls({ ...state.hls, h: v }, src));
+    bindRangeAndNumber(el.hls.lRange, el.hls.lNum, 0, 100, (v, src) => updateFromHls({ ...state.hls, l: v }, src));
+    bindRangeAndNumber(el.hls.sRange, el.hls.sNum, 0, 100, (v, src) => updateFromHls({ ...state.hls, s: v }, src));
+
+    // Интерактивное перетаскивание на 2D-палитрах
+    function bindCanvasPicker(wrapEl, callback) {
+      let dragging = false;
+
+      const handlePointer = (e) => {
+        const rect = wrapEl.getBoundingClientRect();
+        const xNorm = clamp((e.clientX - rect.left) / rect.width, 0, 1);
+        const yNorm = clamp(1 - (e.clientY - rect.top) / rect.height, 0, 1);
+        callback(xNorm, yNorm);
+      };
+
+      wrapEl.addEventListener("pointerdown", (e) => {
+        dragging = true;
+        wrapEl.setPointerCapture(e.pointerId);
+        handlePointer(e);
+      });
+
+      wrapEl.addEventListener("pointermove", (e) => {
+        if (dragging) handlePointer(e);
+      });
+
+      wrapEl.addEventListener("pointerup", () => { dragging = false; });
+      wrapEl.addEventListener("pointercancel", () => { dragging = false; });
+    }
+
+    bindCanvasPicker(el.rgb.wrap, (x, y) => {
+      updateFromRgb({ r: Math.round(x * 255), g: Math.round(y * 255), b: state.rgb.b });
+    });
+
+    bindCanvasPicker(el.cmyk.wrap, (x, y) => {
+      updateFromCmyk({ c: x * 100, m: y * 100, y: state.cmyk.y, k: state.cmyk.k });
+    });
+
+    bindCanvasPicker(el.hls.wrap, (x, y) => {
+      updateFromHls({ h: state.hls.h, s: x * 100, l: y * 100 });
+    });
+
+    // HEX и системная палитра
+    el.hexInput.addEventListener("input", () => {
+      const parsed = hexToRgb(el.hexInput.value);
+      if (parsed) updateFromRgb(parsed, el.hexInput);
+    });
+    el.hexInput.addEventListener("blur", () => {
+      el.hexInput.value = rgbToHex(state.rgb.r, state.rgb.g, state.rgb.b);
+    });
+
+    el.nativePicker.addEventListener("input", () => {
+      const parsed = hexToRgb(el.nativePicker.value);
+      if (parsed) updateFromRgb(parsed, el.nativePicker);
+    });
+
+    // Быстрые палитры-образцы (в шапке и в каждой карточке)
+    function initSwatches() {
+      const globalColors = ["#EF4444", "#F59E0B", "#10B981", "#38BDF8", "#6366F1", "#EC4899", "#FFFFFF", "#000000"];
+      const globalBar = document.getElementById("globalPresets");
+      globalColors.forEach((hex) => {
+        const btn = document.createElement("button");
+        btn.className = "preset-dot";
+        btn.style.backgroundColor = hex;
+        btn.title = hex;
+        btn.addEventListener("click", () => updateFromRgb(hexToRgb(hex)));
+        globalBar.appendChild(btn);
+      });
+
+      const rgbPresets = [
+        [255, 0, 0], [0, 255, 0], [0, 0, 255], [255, 255, 0], [0, 255, 255], [255, 0, 255], [128, 128, 128]
+      ];
+      const rgbSwatches = document.getElementById("rgb-swatches");
+      rgbPresets.forEach(([r, g, b]) => {
+        const btn = document.createElement("button");
+        btn.className = "mini-swatch";
+        btn.style.backgroundColor = `rgb(${r},${g},${b})`;
+        btn.title = `rgb(${r}, ${g}, ${b})`;
+        btn.addEventListener("click", () => updateFromRgb({ r, g, b }));
+        rgbSwatches.appendChild(btn);
+      });
+
+      const cmykPresets = [
+        [100, 0, 0, 0], [0, 100, 0, 0], [0, 0, 100, 0], [0, 0, 0, 100], [100, 100, 0, 0], [0, 100, 100, 0], [100, 0, 100, 0]
+      ];
+      const cmykSwatches = document.getElementById("cmyk-swatches");
+      cmykPresets.forEach(([c, m, y, k]) => {
+        const rgb = cmykToRgb(c, m, y, k);
+        const btn = document.createElement("button");
+        btn.className = "mini-swatch";
+        btn.style.backgroundColor = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+        btn.title = `cmyk(${c}%, ${m}%, ${y}%, ${k}%)`;
+        btn.addEventListener("click", () => updateFromCmyk({ c, m, y, k }));
+        cmykSwatches.appendChild(btn);
+      });
+
+      const hlsPresets = [
+        [0, 50, 100], [45, 50, 100], [120, 45, 80], [180, 50, 100], [220, 55, 90], [285, 55, 85], [0, 95, 0]
+      ];
+      const hlsSwatches = document.getElementById("hls-swatches");
+      hlsPresets.forEach(([h, l, s]) => {
+        const rgb = hlsToRgb(h, l, s);
+        const btn = document.createElement("button");
+        btn.className = "mini-swatch";
+        btn.style.backgroundColor = `rgb(${rgb.r},${rgb.g},${rgb.b})`;
+        btn.title = `hls(${h}°, ${l}%, ${s}%)`;
+        btn.addEventListener("click", () => updateFromHls({ h, l, s }));
+        hlsSwatches.appendChild(btn);
+      });
+    }
+
+    initSwatches();
+    renderUI();
+  </script>
+</body>
+</html>
