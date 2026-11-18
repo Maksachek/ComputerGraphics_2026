@@ -1,0 +1,1388 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Лабораторная работа №2 — Сегментация и глобальная пороговая обработка</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --surface: #1e293b;
+      --surface-2: #263348;
+      --border: #334155;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #38bdf8;
+      --accent-2: #f59e0b;
+      --radius: 14px;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 20px 16px 40px;
+      line-height: 1.45;
+    }
+
+    .container {
+      max-width: 1320px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+    }
+
+    /* Шапка и база изображений */
+    .header-top {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    h1 { font-size: 1.32rem; font-weight: 700; }
+    .subtitle { color: var(--muted); font-size: 0.9rem; margin-top: 2px; }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      background: var(--bg);
+      padding: 5px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+    }
+
+    .tab-btn {
+      border: none;
+      background: transparent;
+      color: var(--muted);
+      padding: 8px 14px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 0.88rem;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .tab-btn.active {
+      background: var(--accent);
+      color: #0f172a;
+    }
+
+    .dataset-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      padding-top: 12px;
+      border-top: 1px solid var(--border);
+    }
+
+    .dataset-label {
+      font-size: 0.84rem;
+      color: var(--muted);
+      font-weight: 600;
+      margin-right: 4px;
+    }
+
+    .img-btn {
+      background: var(--surface-2);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 11px;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: border-color 0.15s, background 0.15s;
+    }
+
+    .img-btn:hover { border-color: var(--accent); }
+    .img-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: var(--accent);
+      color: #e0f2fe;
+      font-weight: 600;
+    }
+
+    .upload-label {
+      margin-left: auto;
+      background: #0ea5e9;
+      color: #0f172a;
+      font-weight: 600;
+      font-size: 0.82rem;
+      padding: 6px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .upload-label input { display: none; }
+
+    /* Панели режимов */
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    /* Часть 1: Сегментация */
+    .seg-layout {
+      display: grid;
+      grid-template-columns: 330px 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .seg-layout { grid-template-columns: 1fr; }
+    }
+
+    .controls-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .control-group label {
+      font-size: 0.82rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+
+    select, input[type="range"] {
+      width: 100%;
+    }
+
+    select {
+      background: var(--bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      font-size: 0.88rem;
+    }
+
+    .radio-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    .radio-pill {
+      flex: 1;
+      text-align: center;
+      padding: 7px 8px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 0.82rem;
+      cursor: pointer;
+    }
+
+    .radio-pill.active {
+      border-color: var(--accent);
+      background: rgba(56, 189, 248, 0.16);
+      font-weight: 600;
+    }
+
+    .checkbox-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.86rem;
+      cursor: pointer;
+    }
+
+    .kernel-box {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px;
+    }
+
+    .kernel-title {
+      font-size: 0.78rem;
+      color: var(--muted);
+      margin-bottom: 8px;
+      text-align: center;
+    }
+
+    .kernel-grid {
+      display: grid;
+      gap: 4px;
+      max-width: 190px;
+      margin: 0 auto;
+    }
+
+    .kernel-cell {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 5px;
+      padding: 5px 0;
+      text-align: center;
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    .canvas-pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 720px) {
+      .canvas-pair { grid-template-columns: 1fr; }
+    }
+
+    .canvas-card {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .canvas-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 0.86rem;
+      font-weight: 600;
+    }
+
+    .canvas-head span.meta {
+      color: var(--muted);
+      font-weight: 400;
+      font-size: 0.78rem;
+    }
+
+    .canvas-frame {
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: #020617;
+      border-radius: 8px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .canvas-frame canvas {
+      max-width: 100%;
+      max-height: 100%;
+      image-rendering: pixelated;
+    }
+
+    /* Часть 2: Пороговая обработка */
+    .thresh-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width: 1050px) {
+      .thresh-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 600px) {
+      .thresh-grid { grid-template-columns: 1fr; }
+    }
+
+    .hist-section {
+      display: grid;
+      grid-template-columns: 1.2fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    @media (max-width: 960px) {
+      .hist-section { grid-template-columns: 1fr; }
+    }
+
+    .hist-wrap {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+    }
+
+    .hist-legend {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 8px;
+      font-size: 0.82rem;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 11px;
+      height: 11px;
+      border-radius: 3px;
+      display: inline-block;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+      background: var(--bg);
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+    }
+
+    th, td {
+      padding: 10px 12px;
+      text-align: left;
+      border-bottom: 1px solid var(--border);
+    }
+
+    th {
+      background: var(--surface-2);
+      color: var(--muted);
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    tr:last-child td { border-bottom: none; }
+
+    .note-box {
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 10px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.3);
+      font-size: 0.86rem;
+      color: #e2e8f0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Шапка -->
+    <section class="card">
+      <div class="header-top">
+        <div>
+          <h1>Лабораторная работа №2 (Вариант 9)</h1>
+          <p class="subtitle">Сегментация (точки, линии, перепады яркости) и сравнение методов глобальной пороговой обработки</p>
+        </div>
+
+        <div class="tabs">
+          <button class="tab-btn active" data-tab="seg">1. Сегментация изображений</button>
+          <button class="tab-btn" data-tab="thresh">2. Глобальная пороговая обработка</button>
+        </div>
+      </div>
+
+      <div class="dataset-bar">
+        <span class="dataset-label">База изображений:</span>
+        <button class="img-btn active" data-preset="primitives">Точки, линии и грани</button>
+        <button class="img-btn" data-preset="bimodal">Бимодальный объект</button>
+        <button class="img-btn" data-preset="noisy">Зашумлённое</button>
+        <button class="img-btn" data-preset="lowcontrast">Малоконтрастное (дисбаланс)</button>
+        <button class="img-btn" data-preset="blurred">Размытые перепады</button>
+        <button class="img-btn" data-preset="uneven">Неравномерное освещение</button>
+
+        <label class="upload-label">
+          Загрузить своё
+          <input type="file" id="fileInput" accept="image/*" />
+        </label>
+      </div>
+    </section>
+
+    <!-- ЧАСТЬ 1: СЕГМЕНТАЦИЯ -->
+    <section class="card panel active" id="panel-seg">
+      <div class="seg-layout">
+        <div class="controls-col">
+          <div class="control-group">
+            <label for="segCategory">Тип сегментации</label>
+            <select id="segCategory">
+              <option value="points">Обнаружение изолированных точек</option>
+              <option value="lines">Обнаружение линий</option>
+              <option value="edges" selected>Обнаружение перепадов яркости (границ)</option>
+            </select>
+          </div>
+
+          <div class="control-group" id="subMethodGroup">
+            <label for="segSubMethod">Оператор / направление</label>
+            <select id="segSubMethod"></select>
+          </div>
+
+          <div class="control-group">
+            <label>Режим отображения результата</label>
+            <div class="radio-row">
+              <div class="radio-pill active" data-mode="response">Карта отклика</div>
+              <div class="radio-pill" data-mode="binary">Бинарная (по порогу T)</div>
+            </div>
+          </div>
+
+          <div class="control-group" id="thresholdSliderGroup">
+            <label for="segThreshold">Порог отсечения T: <strong id="segThreshVal">50</strong></label>
+            <input type="range" id="segThreshold" min="1" max="255" value="50" />
+          </div>
+
+          <label class="checkbox-row">
+            <input type="checkbox" id="gaussianPre" />
+            Предварительное сглаживание (Гаусс 3×3)
+          </label>
+
+          <div class="kernel-box">
+            <div class="kernel-title" id="kernelTitle">Маска оператора</div>
+            <div class="kernel-grid" id="kernelGrid"></div>
+          </div>
+        </div>
+
+        <div class="canvas-pair">
+          <div class="canvas-card">
+            <div class="canvas-head">
+              <span>Исходное (оттенки серого)</span>
+              <span class="meta" id="origDims">320 × 240</span>
+            </div>
+            <div class="canvas-frame">
+              <canvas id="segOrigCanvas"></canvas>
+            </div>
+          </div>
+
+          <div class="canvas-card">
+            <div class="canvas-head">
+              <span id="segOutTitle">Результат сегментации</span>
+              <span class="meta" id="segStats">—</span>
+            </div>
+            <div class="canvas-frame">
+              <canvas id="segOutCanvas"></canvas>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ЧАСТЬ 2: ГЛОБАЛЬНАЯ ПОРОГОВАЯ ОБРАБОТКА -->
+    <section class="card panel" id="panel-thresh">
+      <div class="thresh-grid">
+        <div class="canvas-card">
+          <div class="canvas-head">
+            <span>Исходное (Grayscale)</span>
+            <span class="meta" id="thOrigInfo">—</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="thOrigCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="canvas-card">
+          <div class="canvas-head">
+            <span>1. Метод Оцу (Otsu)</span>
+            <span class="meta" id="otsuBadge">T = —</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="otsuCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="canvas-card">
+          <div class="canvas-head">
+            <span>2. Итеративный метод</span>
+            <span class="meta" id="iterBadge">T = —</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="iterCanvas"></canvas>
+          </div>
+        </div>
+
+        <div class="canvas-card">
+          <div class="canvas-head">
+            <span>Карта расхождений</span>
+            <span class="meta" id="diffBadge">Различие: —</span>
+          </div>
+          <div class="canvas-frame">
+            <canvas id="diffCanvas"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <div class="hist-section">
+        <div class="hist-wrap">
+          <div class="canvas-head" style="margin-bottom:8px;">
+            <span>Гистограмма яркости и найденные пороги</span>
+            <span class="meta">0 .. 255</span>
+          </div>
+          <canvas id="histCanvas" width="600" height="210" style="width:100%; height:auto; display:block;"></canvas>
+          <div class="hist-legend">
+            <div class="legend-item"><span class="dot" style="background:#38bdf8;"></span>Порог Оцу (<b id="legOtsu"></b>)</div>
+            <div class="legend-item"><span class="dot" style="background:#f59e0b;"></span>Итеративный порог (<b id="legIter"></b>)</div>
+            <div class="legend-item"><span class="dot" style="background:#ef4444;"></span>Объект только по Оцу</div>
+            <div class="legend-item"><span class="dot" style="background:#3b82f6;"></span>Объект только по Итеративному</div>
+          </div>
+        </div>
+
+        <div>
+          <table>
+            <thead>
+              <tr>
+                <th>Метрика сравнения</th>
+                <th>Метод Оцу</th>
+                <th>Итеративный метод</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Вычисленный порог T</td>
+                <td id="mOtsuT">—</td>
+                <td id="mIterT">—</td>
+              </tr>
+              <tr>
+                <td>Доля переднего плана (белых)</td>
+                <td id="mOtsuFg">—</td>
+                <td id="mIterFg">—</td>
+              </tr>
+              <tr>
+                <td>Межклассовая дисперсия σ²_B</td>
+                <td id="mOtsuVar">—</td>
+                <td id="mIterVar">—</td>
+              </tr>
+              <tr>
+                <td>Итераций / сложность</td>
+                <td>Перебор 256 уровней</td>
+                <td id="mIterSteps">—</td>
+              </tr>
+              <tr>
+                <td>Время расчёта</td>
+                <td id="mOtsuTime">—</td>
+                <td id="mIterTime">—</td>
+              </tr>
+            </tbody>
+          </table>
+
+          <div class="note-box" id="comparisonNote"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // =========================================================================
+    // 1. ХРАНЕНИЕ ТЕКУЩЕГО ИЗОБРАЖЕНИЯ И БАЗА ТЕСТОВЫХ ИЗОБРАЖЕНИЙ
+    // =========================================================================
+
+    const IMG_W = 320;
+    const IMG_H = 240;
+
+    const appState = {
+      width: IMG_W,
+      height: IMG_H,
+      gray: new Uint8ClampedArray(IMG_W * IMG_H),
+      preset: "primitives",
+      segMode: "response" // "response" | "binary"
+    };
+
+    // Детерминированный ГПСЧ для воспроизводимого шума
+    function mulberry32(seed) {
+      return function() {
+        let t = (seed += 0x6D2B79F5);
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function generatePresetImage(name) {
+      const w = IMG_W, h = IMG_H;
+      const off = document.createElement("canvas");
+      off.width = w;
+      off.height = h;
+      const ctx = off.getContext("2d");
+      const rand = mulberry32(42);
+
+      if (name === "primitives") {
+        // Фон + перепад яркости (ступенька) + линии + изолированные точки
+        ctx.fillStyle = "#181818";
+        ctx.fillRect(0, 0, w, h);
+
+        // Светлая область (ступенька перепада яркости + прямоугольник)
+        ctx.fillStyle = "#c8c8c8";
+        ctx.fillRect(200, 30, 95, 95);
+
+        ctx.fillStyle = "#888888";
+        ctx.beginPath();
+        ctx.arc(245, 180, 36, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Изолированные точки (1x1 и 2x2)
+        ctx.fillStyle = "#ffffff";
+        [[35, 35], [60, 48], [45, 70], [85, 35], [115, 65]].forEach(([x, y]) => {
+          ctx.fillRect(x, y, 1, 1);
+        });
+        ctx.fillRect(145, 42, 2, 2);
+        // Тёмная точка внутри светлого квадрата
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(247, 77, 2, 2);
+
+        // Линии: горизонтальная, вертикальная, +45 и -45 градусов (толщиной 1 px)
+        ctx.strokeStyle = "#f0f0f0";
+        ctx.lineWidth = 1;
+        // Горизонтальная
+        ctx.beginPath(); ctx.moveTo(20, 120.5); ctx.lineTo(165, 120.5); ctx.stroke();
+        // Вертикальная
+        ctx.beginPath(); ctx.moveTo(90.5, 90); ctx.lineTo(90.5, 215); ctx.stroke();
+        // Диагональная -45 (сверху-слева вниз-направо)
+        ctx.beginPath(); ctx.moveTo(25, 145); ctx.lineTo(80, 200); ctx.stroke();
+        // Диагональная +45 (снизу-слева вверх-направо)
+        ctx.beginPath(); ctx.moveTo(115, 205); ctx.lineTo(175, 145); ctx.stroke();
+      }
+      else if (name === "bimodal") {
+        // Классическое бимодальное изображение: контрастные детали/текст
+        ctx.fillStyle = "#222222";
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = "#dedede";
+        ctx.beginPath(); ctx.arc(90, 110, 52, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(175, 45, 110, 75);
+
+        ctx.fillStyle = "#222222";
+        ctx.beginPath(); ctx.arc(90, 110, 22, 0, Math.PI * 2); ctx.fill();
+
+        ctx.fillStyle = "#e6e6e6";
+        ctx.font = "bold 28px sans-serif";
+        ctx.fillText("CV LAB 2", 168, 175);
+      }
+      else if (name === "noisy") {
+        // Контрастные фигуры + сильный гауссов и импульсный шум
+        ctx.fillStyle = "#2a2a2a";
+        ctx.fillRect(0, 0, w, h);
+        ctx.fillStyle = "#d4d4d4";
+        ctx.fillRect(45, 45, 95, 145);
+        ctx.beginPath(); ctx.arc(225, 120, 55, 0, Math.PI * 2); ctx.fill();
+
+        const img = ctx.getImageData(0, 0, w, h);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) {
+          // Бокс-Мюллер для гауссова шума
+          const u1 = Math.max(1e-6, rand()), u2 = rand();
+          const gauss = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2) * 28;
+          let v = d[i] + gauss;
+          // Импульсный шум "соль и перец" (3%)
+          const p = rand();
+          if (p < 0.015) v = 0;
+          else if (p > 0.985) v = 255;
+          v = Math.max(0, Math.min(255, Math.round(v)));
+          d[i] = d[i + 1] = d[i + 2] = v;
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+      else if (name === "lowcontrast") {
+        // Большой шумный тёмный фон (~86%) и небольшой светлый объект с широким разбросом (~14%)
+        // Показывает заметное расхождение между методом Оцу и итеративным методом
+        const img = ctx.createImageData(w, h);
+        const d = img.data;
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const idx = (y * w + x) * 4;
+            const u1 = Math.max(1e-6, rand()), u2 = rand();
+            const n = Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
+
+            const dx = x - 220, dy = y - 120;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+            let val;
+            if (dist < 42 || (x > 55 && x < 115 && y > 75 && y < 145)) {
+              // Передний план: широкий разброс яркости (от 105 до 220)
+              val = 155 + n * 32;
+            } else {
+              // Фон: узкий пик около 45
+              val = 45 + n * 10;
+            }
+            val = Math.max(0, Math.min(255, Math.round(val)));
+            d[idx] = d[idx + 1] = d[idx + 2] = val;
+            d[idx + 3] = 255;
+          }
+        }
+        ctx.putImageData(img, 0, 0);
+      }
+      else if (name === "blurred") {
+        // Размытые перепады яркости
+        ctx.fillStyle = "#1c1c1c";
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.filter = "blur(5px)";
+        ctx.fillStyle = "#c4c4c4";
+        ctx.fillRect(40, 40, 100, 150);
+        ctx.beginPath(); ctx.arc(230, 115, 52, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = "#e0e0e0";
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(150, 200); ctx.lineTo(290, 185); ctx.stroke();
+        ctx.filter = "none";
+      }
+      else if (name === "uneven") {
+        // Неравномерное освещение (градиент тени слева направо) + тёмный текст/объекты
+        const grad = ctx.createLinearGradient(0, 0, w, h);
+        grad.addColorStop(0, "#404040");
+        grad.addColorStop(1, "#e8e8e8");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        ctx.fillStyle = "#151515";
+        ctx.font = "bold 24px sans-serif";
+        ctx.fillText("ТЕКСТ В ТЕНИ", 22, 65);
+        ctx.fillText("НА СВЕТУ", 155, 190);
+        ctx.beginPath(); ctx.arc(85, 155, 30, 0, Math.PI * 2); ctx.fill();
+        ctx.fillRect(210, 45, 70, 55);
+      }
+
+      const data = ctx.getImageData(0, 0, w, h).data;
+      loadFromRgba(data, w, h);
+    }
+
+    function loadFromRgba(rgba, w, h) {
+      appState.width = w;
+      appState.height = h;
+      appState.gray = new Uint8ClampedArray(w * h);
+      for (let i = 0; i < w * h; i++) {
+        const j = i * 4;
+        appState.gray[i] = Math.round(0.299 * rgba[j] + 0.587 * rgba[j + 1] + 0.114 * rgba[j + 2]);
+      }
+      runAll();
+    }
+
+    function drawGrayToCanvas(canvas, gray, w, h) {
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      const img = ctx.createImageData(w, h);
+      const d = img.data;
+      for (let i = 0; i < w * h; i++) {
+        const v = gray[i];
+        const j = i * 4;
+        d[j] = d[j + 1] = d[j + 2] = v;
+        d[j + 3] = 255;
+      }
+      ctx.putImageData(img, 0, 0);
+    }
+
+    // =========================================================================
+    // 2. ЧАСТЬ 1: СЕГМЕНТАЦИЯ (ТОЧКИ, ЛИНИИ, ПЕРЕПАДЫ ЯРКОСТИ)
+    // =========================================================================
+
+    const KERNELS = {
+      points: {
+        laplacian8: {
+          name: "Маска обнаружения точек (Лапласиан 8-связный)",
+          size: 3,
+          k: [[-1, -1, -1], [-1, 8, -1], [-1, -1, -1]]
+        }
+      },
+      lines: {
+        horiz: {
+          name: "Горизонтальные линии",
+          size: 3,
+          k: [[-1, -1, -1], [2, 2, 2], [-1, -1, -1]]
+        },
+        vert: {
+          name: "Вертикальные линии",
+          size: 3,
+          k: [[-1, 2, -1], [-1, 2, -1], [-1, 2, -1]]
+        },
+        diagPlus45: {
+          name: "Диагональные линии (+45°)",
+          size: 3,
+          k: [[-1, -1, 2], [-1, 2, -1], [2, -1, -1]]
+        },
+        diagMinus45: {
+          name: "Диагональные линии (-45°)",
+          size: 3,
+          k: [[2, -1, -1], [-1, 2, -1], [-1, -1, 2]]
+        },
+        allDirs: {
+          name: "Все 4 направления (max |R_i|)",
+          size: 3,
+          k: [["max", "|R₁|", "|R₂|"], ["|R₃|", "|R₄|", ""]]
+        }
+      },
+      edges: {
+        sobel: {
+          name: "Оператор Собеля (Gx и Gy)",
+          size: 3,
+          gx: [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]],
+          gy: [[-1, -2, -1], [0, 0, 0], [1, 2, 1]]
+        },
+        prewitt: {
+          name: "Оператор Прюитта (Gx и Gy)",
+          size: 3,
+          gx: [[-1, 0, 1], [-1, 0, 1], [-1, 0, 1]],
+          gy: [[-1, -1, -1], [0, 0, 0], [1, 1, 1]]
+        },
+        roberts: {
+          name: "Перекрёстный оператор Робертса (2×2)",
+          size: 2,
+          gx: [[1, 0], [0, -1]],
+          gy: [[0, 1], [-1, 0]]
+        },
+        laplacian: {
+          name: "Лапласиан (вторая производная, 4-связный)",
+          size: 3,
+          k: [[0, 1, 0], [1, -4, 1], [0, 1, 0]]
+        }
+      }
+    };
+
+    function getPixelClamped(src, w, h, x, y) {
+      const cx = Math.max(0, Math.min(w - 1, x));
+      const cy = Math.max(0, Math.min(h - 1, y));
+      return src[cy * w + cx];
+    }
+
+    function gaussianSmooth3x3(src, w, h) {
+      const out = new Uint8ClampedArray(w * h);
+      const gk = [[1, 2, 1], [2, 4, 2], [1, 2, 1]];
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          let sum = 0;
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              sum += getPixelClamped(src, w, h, x + kx, y + ky) * gk[ky + 1][kx + 1];
+            }
+          }
+          out[y * w + x] = Math.round(sum / 16);
+        }
+      }
+      return out;
+    }
+
+    function convolve3x3(src, w, h, kernel) {
+      const resp = new Float32Array(w * h);
+      for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+          let sum = 0;
+          for (let ky = -1; ky <= 1; ky++) {
+            for (let kx = -1; kx <= 1; kx++) {
+              sum += getPixelClamped(src, w, h, x + kx, y + ky) * kernel[ky + 1][kx + 1];
+            }
+          }
+          resp[y * w + x] = Math.abs(sum);
+        }
+      }
+      return resp;
+    }
+
+    function computeEdgeGradient(src, w, h, op) {
+      const resp = new Float32Array(w * h);
+      if (op.size === 2) {
+        // Оператор Робертса 2x2
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            const p00 = getPixelClamped(src, w, h, x, y);
+            const p10 = getPixelClamped(src, w, h, x + 1, y);
+            const p01 = getPixelClamped(src, w, h, x, y + 1);
+            const p11 = getPixelClamped(src, w, h, x + 1, y + 1);
+            const gx = p00 - p11;
+            const gy = p10 - p01;
+            resp[y * w + x] = Math.sqrt(gx * gx + gy * gy);
+          }
+        }
+      } else {
+        for (let y = 0; y < h; y++) {
+          for (let x = 0; x < w; x++) {
+            let gx = 0, gy = 0;
+            for (let ky = -1; ky <= 1; ky++) {
+              for (let kx = -1; kx <= 1; kx++) {
+                const p = getPixelClamped(src, w, h, x + kx, y + ky);
+                gx += p * op.gx[ky + 1][kx + 1];
+                gy += p * op.gy[ky + 1][kx + 1];
+              }
+            }
+            resp[y * w + x] = Math.sqrt(gx * gx + gy * gy);
+          }
+        }
+      }
+      return resp;
+    }
+
+    function renderKernelPreview(cat, sub) {
+      const grid = document.getElementById("kernelGrid");
+      const title = document.getElementById("kernelTitle");
+      const def = KERNELS[cat][sub];
+      title.textContent = def.name;
+      grid.innerHTML = "";
+
+      const matrix = def.k || def.gx;
+      const cols = matrix[0].length;
+      grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      matrix.forEach((row) => {
+        row.forEach((val) => {
+          const cell = document.createElement("div");
+          cell.className = "kernel-cell";
+          cell.textContent = val;
+          grid.appendChild(cell);
+        });
+      });
+    }
+
+    function runSegmentation() {
+      const w = appState.width, h = appState.height;
+      const useGauss = document.getElementById("gaussianPre").checked;
+      const src = useGauss ? gaussianSmooth3x3(appState.gray, w, h) : appState.gray;
+
+      drawGrayToCanvas(document.getElementById("segOrigCanvas"), src, w, h);
+      document.getElementById("origDims").textContent = `${w} × ${h}`;
+
+      const cat = document.getElementById("segCategory").value;
+      const sub = document.getElementById("segSubMethod").value;
+      const thresh = parseInt(document.getElementById("segThreshold").value, 10);
+
+      let resp;
+      if (cat === "points") {
+        resp = convolve3x3(src, w, h, KERNELS.points.laplacian8.k);
+      } else if (cat === "lines") {
+        if (sub === "allDirs") {
+          const r1 = convolve3x3(src, w, h, KERNELS.lines.horiz.k);
+          const r2 = convolve3x3(src, w, h, KERNELS.lines.vert.k);
+          const r3 = convolve3x3(src, w, h, KERNELS.lines.diagPlus45.k);
+          const r4 = convolve3x3(src, w, h, KERNELS.lines.diagMinus45.k);
+          resp = new Float32Array(w * h);
+          for (let i = 0; i < w * h; i++) {
+            resp[i] = Math.max(r1[i], r2[i], r3[i], r4[i]);
+          }
+        } else {
+          resp = convolve3x3(src, w, h, KERNELS.lines[sub].k);
+        }
+      } else {
+        if (sub === "laplacian") {
+          resp = convolve3x3(src, w, h, KERNELS.edges.laplacian.k);
+        } else {
+          resp = computeEdgeGradient(src, w, h, KERNELS.edges[sub]);
+        }
+      }
+
+      const out = new Uint8ClampedArray(w * h);
+      let activeCount = 0;
+      let maxResp = 0;
+
+      for (let i = 0; i < w * h; i++) {
+        if (resp[i] > maxResp) maxResp = resp[i];
+        if (appState.segMode === "binary") {
+          if (resp[i] >= thresh) {
+            out[i] = 255;
+            activeCount++;
+          } else {
+            out[i] = 0;
+          }
+        } else {
+          out[i] = Math.min(255, Math.round(resp[i]));
+        }
+      }
+
+      drawGrayToCanvas(document.getElementById("segOutCanvas"), out, w, h);
+      document.getElementById("segOutTitle").textContent =
+        appState.segMode === "binary" ? `Бинарная маска (T ≥ ${thresh})` : "Карта отклика |R|";
+      document.getElementById("segStats").textContent =
+        appState.segMode === "binary"
+          ? `Найдено пикселей: ${activeCount} (${((activeCount / (w * h)) * 100).toFixed(1)}%)`
+          : `Макс. отклик: ${Math.round(maxResp)}`;
+    }
+
+    // =========================================================================
+    // 3. ЧАСТЬ 2: ГЛОБАЛЬНАЯ ПОРОГОВАЯ ОБРАБОТКА (ОЦУ VS ИТЕРАТИВНЫЙ)
+    // =========================================================================
+
+    function computeHistogram(gray) {
+      const hist = new Uint32Array(256);
+      for (let i = 0; i < gray.length; i++) hist[gray[i]]++;
+      return hist;
+    }
+
+    function betweenClassVariance(hist, total, threshold) {
+      let w1 = 0, sum1 = 0, sumTotal = 0;
+      for (let i = 0; i < 256; i++) sumTotal += i * hist[i];
+      for (let i = 0; i <= threshold; i++) {
+        w1 += hist[i];
+        sum1 += i * hist[i];
+      }
+      const w2 = total - w1;
+      if (w1 === 0 || w2 === 0) return 0;
+      const m1 = sum1 / w1;
+      const m2 = (sumTotal - sum1) / w2;
+      const p1 = w1 / total, p2 = w2 / total;
+      return p1 * p2 * (m1 - m2) * (m1 - m2);
+    }
+
+    /**
+     * Метод Оцу (Otsu): максимизация межклассовой дисперсии sigma_B^2(t)
+     */
+    function otsuThreshold(hist, total) {
+      const t0 = performance.now();
+      let sumTotal = 0;
+      for (let i = 0; i < 256; i++) sumTotal += i * hist[i];
+
+      let wB = 0;
+      let sumB = 0;
+      let maxVar = -1;
+      let bestSum = 0;
+      let bestCount = 0;
+
+      for (let t = 0; t < 256; t++) {
+        wB += hist[t];
+        if (wB === 0) continue;
+        const wF = total - wB;
+        if (wF === 0) break;
+
+        sumB += t * hist[t];
+        const mB = sumB / wB;
+        const mF = (sumTotal - sumB) / wF;
+        const pB = wB / total;
+        const pF = wF / total;
+        const variance = pB * pF * (mB - mF) * (mB - mF);
+
+        if (variance > maxVar + 1e-9) {
+          maxVar = variance;
+          bestSum = t;
+          bestCount = 1;
+        } else if (Math.abs(variance - maxVar) <= 1e-9) {
+          bestSum += t;
+          bestCount++;
+        }
+      }
+
+      const threshold = Math.round(bestSum / bestCount);
+      return {
+        threshold,
+        variance: maxVar,
+        ms: performance.now() - t0
+      };
+    }
+
+    /**
+     * Итеративный глобальный метод (Гонсалес–Вудс / Ridler–Calvard)
+     */
+    function iterativeThreshold(hist, total) {
+      const t0 = performance.now();
+      let sumTotal = 0;
+      for (let i = 0; i < 256; i++) sumTotal += i * hist[i];
+      let T = sumTotal / total;
+      let steps = 0;
+
+      for (let iter = 0; iter < 100; iter++) {
+        steps++;
+        const tInt = Math.floor(T);
+        let c1 = 0, s1 = 0, c2 = 0, s2 = 0;
+
+        for (let i = 0; i <= tInt; i++) {
+          c1 += hist[i];
+          s1 += i * hist[i];
+        }
+        for (let i = tInt + 1; i < 256; i++) {
+          c2 += hist[i];
+          s2 += i * hist[i];
+        }
+
+        if (c1 === 0 || c2 === 0) break;
+        const m1 = s1 / c1;
+        const m2 = s2 / c2;
+        const nextT = 0.5 * (m1 + m2);
+        if (Math.abs(nextT - T) < 0.5) {
+          T = nextT;
+          break;
+        }
+        T = nextT;
+      }
+
+      const threshold = Math.round(T);
+      return {
+        threshold,
+        steps,
+        variance: betweenClassVariance(hist, total, threshold),
+        ms: performance.now() - t0
+      };
+    }
+
+    function applyThreshold(gray, T) {
+      const out = new Uint8ClampedArray(gray.length);
+      let fg = 0;
+      for (let i = 0; i < gray.length; i++) {
+        if (gray[i] > T) {
+          out[i] = 255;
+          fg++;
+        } else {
+          out[i] = 0;
+        }
+      }
+      return { out, fg };
+    }
+
+    function drawHistogram(hist, tOtsu, tIter) {
+      const canvas = document.getElementById("histCanvas");
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width, h = canvas.height;
+      ctx.clearRect(0, 0, w, h);
+
+      ctx.fillStyle = "#020617";
+      ctx.fillRect(0, 0, w, h);
+
+      let maxH = 1;
+      for (let i = 0; i < 256; i++) if (hist[i] > maxH) maxH = hist[i];
+
+      const padB = 22, padT = 14;
+      const plotH = h - padB - padT;
+      const barW = w / 256;
+
+      // Столбцы гистограммы
+      ctx.fillStyle = "#64748b";
+      for (let i = 0; i < 256; i++) {
+        const bh = (hist[i] / maxH) * plotH;
+        ctx.fillRect(i * barW, h - padB - bh, Math.ceil(barW), bh);
+      }
+
+      // Ось X
+      ctx.fillStyle = "#94a3b8";
+      ctx.font = "11px monospace";
+      [0, 64, 128, 192, 255].forEach((tick) => {
+        const x = Math.min(w - 22, Math.max(2, tick * barW - 8));
+        ctx.fillText(String(tick), x, h - 6);
+      });
+
+      // Линия Оцу
+      const xOtsu = tOtsu * barW;
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath(); ctx.moveTo(xOtsu, 4); ctx.lineTo(xOtsu, h - padB); ctx.stroke();
+
+      // Линия Итеративного
+      const xIter = tIter * barW;
+      ctx.strokeStyle = "#f59e0b";
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([5, 4]);
+      ctx.beginPath(); ctx.moveTo(xIter, 4); ctx.lineTo(xIter, h - padB); ctx.stroke();
+      ctx.setLineDash([]);
+    }
+
+    function runThresholding() {
+      const w = appState.width, h = appState.height;
+      const gray = appState.gray;
+      const total = w * h;
+      const hist = computeHistogram(gray);
+
+      drawGrayToCanvas(document.getElementById("thOrigCanvas"), gray, w, h);
+      document.getElementById("thOrigInfo").textContent = `${w} × ${h}`;
+
+      const otsu = otsuThreshold(hist, total);
+      const iter = iterativeThreshold(hist, total);
+
+      const resOtsu = applyThreshold(gray, otsu.threshold);
+      const resIter = applyThreshold(gray, iter.threshold);
+
+      drawGrayToCanvas(document.getElementById("otsuCanvas"), resOtsu.out, w, h);
+      drawGrayToCanvas(document.getElementById("iterCanvas"), resIter.out, w, h);
+
+      // Карта расхождений
+      const diffCanvas = document.getElementById("diffCanvas");
+      diffCanvas.width = w;
+      diffCanvas.height = h;
+      const dCtx = diffCanvas.getContext("2d");
+      const dImg = dCtx.createImageData(w, h);
+      const dd = dImg.data;
+      let diffCount = 0;
+
+      for (let i = 0; i < total; i++) {
+        const o = resOtsu.out[i] === 255;
+        const it = resIter.out[i] === 255;
+        const j = i * 4;
+        if (o && it) {
+          // Совпадающий передний план (светло-зелёный)
+          dd[j] = 180; dd[j + 1] = 240; dd[j + 2] = 195;
+        } else if (!o && !it) {
+          // Совпадающий фон (тёмный)
+          dd[j] = 15; dd[j + 1] = 23; dd[j + 2] = 42;
+        } else if (o && !it) {
+          // Только Оцу (красный)
+          dd[j] = 239; dd[j + 1] = 68; dd[j + 2] = 68;
+          diffCount++;
+        } else {
+          // Только Итеративный (синий)
+          dd[j] = 59; dd[j + 1] = 130; dd[j + 2] = 246;
+          diffCount++;
+        }
+        dd[j + 3] = 255;
+      }
+      dCtx.putImageData(dImg, 0, 0);
+
+      drawHistogram(hist, otsu.threshold, iter.threshold);
+
+      // Заполнение метрик
+      const otsuPct = ((resOtsu.fg / total) * 100).toFixed(1);
+      const iterPct = ((resIter.fg / total) * 100).toFixed(1);
+      const diffPct = ((diffCount / total) * 100).toFixed(2);
+
+      document.getElementById("otsuBadge").textContent = `T = ${otsu.threshold}`;
+      document.getElementById("iterBadge").textContent = `T = ${iter.threshold}`;
+      document.getElementById("diffBadge").textContent = `Расхождение: ${diffPct}%`;
+      document.getElementById("legOtsu").textContent = `T = ${otsu.threshold}`;
+      document.getElementById("legIter").textContent = `T = ${iter.threshold}`;
+
+      document.getElementById("mOtsuT").textContent = otsu.threshold;
+      document.getElementById("mIterT").textContent = iter.threshold;
+      document.getElementById("mOtsuFg").textContent = `${otsuPct}%`;
+      document.getElementById("mIterFg").textContent = `${iterPct}%`;
+      document.getElementById("mOtsuVar").textContent = otsu.variance.toFixed(1);
+      document.getElementById("mIterVar").textContent = iter.variance.toFixed(1);
+      document.getElementById("mIterSteps").textContent = `${iter.steps} итер.`;
+      document.getElementById("mOtsuTime").textContent = `${otsu.ms.toFixed(2)} мс`;
+      document.getElementById("mIterTime").textContent = `${iter.ms.toFixed(2)} мс`;
+
+      const note = document.getElementById("comparisonNote");
+      const deltaT = Math.abs(otsu.threshold - iter.threshold);
+      if (deltaT <= 3) {
+        note.innerHTML = `<strong>Анализ:</strong> Пороги практически совпали (ΔT = ${deltaT}). Для изображений с выраженной бимодальностью оба метода находят границу между двумя модами гистограммы одинаково точно.`;
+      } else {
+        note.innerHTML = `<strong>Анализ:</strong> Наблюдается заметное расхождение порогов (ΔT = ${deltaT}, отличие ${diffPct}% пикселей). Метод Оцу максимизирует межклассовую дисперсию σ²_B (${otsu.variance.toFixed(1)} против ${iter.variance.toFixed(1)}) и учитывает веса (размеры) классов, тогда как итеративный метод стремится к середине (μ₁+μ₂)/2 между центрами яркостей.`;
+      }
+    }
+
+    function runAll() {
+      runSegmentation();
+      runThresholding();
+    }
+
+    // =========================================================================
+    // 4. УПРАВЛЕНИЕ ИНТЕРФЕЙСОМ И СОБЫТИЯ
+    // =========================================================================
+
+    function populateSubMethods() {
+      const cat = document.getElementById("segCategory").value;
+      const subSel = document.getElementById("segSubMethod");
+      const subGroup = document.getElementById("subMethodGroup");
+      subSel.innerHTML = "";
+
+      if (cat === "points") {
+        subGroup.style.display = "none";
+        const opt = document.createElement("option");
+        opt.value = "laplacian8";
+        opt.textContent = "Лапласиан 8-связный";
+        subSel.appendChild(opt);
+      } else if (cat === "lines") {
+        subGroup.style.display = "flex";
+        [
+          ["allDirs", "Все 4 направления (максимум)"],
+          ["horiz", "Горизонтальные линии"],
+          ["vert", "Вертикальные линии"],
+          ["diagPlus45", "Диагональные (+45°)"],
+          ["diagMinus45", "Диагональные (-45°)"]
+        ].forEach(([val, text]) => {
+          const opt = document.createElement("option");
+          opt.value = val; opt.textContent = text;
+          subSel.appendChild(opt);
+        });
+      } else {
+        subGroup.style.display = "flex";
+        [
+          ["sobel", "Оператор Собеля (3×3)"],
+          ["prewitt", "Оператор Прюитта (3×3)"],
+          ["roberts", "Оператор Робертса (2×2)"],
+          ["laplacian", "Лапласиан (вторая производная)"]
+        ].forEach(([val, text]) => {
+          const opt = document.createElement("option");
+          opt.value = val; opt.textContent = text;
+          subSel.appendChild(opt);
+        });
+      }
+      renderKernelPreview(cat, subSel.value);
+    }
+
+    // Вкладки
+    document.querySelectorAll(".tab-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab-btn").forEach((b) => b.classList.remove("active"));
+        document.querySelectorAll(".panel").forEach((p) => p.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById(`panel-${btn.dataset.tab}`).classList.add("active");
+      });
+    });
+
+    // Выбор тестового изображения
+    document.querySelectorAll(".img-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".img-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        appState.preset = btn.dataset.preset;
+        generatePresetImage(appState.preset);
+      });
+    });
+
+    // Загрузка пользовательского файла
+    document.getElementById("fileInput").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const img = new Image();
+      img.onload = () => {
+        // Масштабируем до разумного размера для быстрого расчёта в реальном времени
+        const maxSide = 480;
+        let w = img.width, h = img.height;
+        if (w > maxSide || h > maxSide) {
+          const scale = maxSide / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        const off = document.createElement("canvas");
+        off.width = w; off.height = h;
+        const ctx = off.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        document.querySelectorAll(".img-btn").forEach((b) => b.classList.remove("active"));
+        loadFromRgba(ctx.getImageData(0, 0, w, h).data, w, h);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+
+    // Элементы управления сегментацией
+    document.getElementById("segCategory").addEventListener("change", () => {
+      populateSubMethods();
+      runSegmentation();
+    });
+
+    document.getElementById("segSubMethod").addEventListener("change", () => {
+      renderKernelPreview(
+        document.getElementById("segCategory").value,
+        document.getElementById("segSubMethod").value
+      );
+      runSegmentation();
+    });
+
+    document.querySelectorAll(".radio-pill").forEach((pill) => {
+      pill.addEventListener("click", () => {
+        document.querySelectorAll(".radio-pill").forEach((p) => p.classList.remove("active"));
+        pill.classList.add("active");
+        appState.segMode = pill.dataset.mode;
+        runSegmentation();
+      });
+    });
+
+    document.getElementById("segThreshold").addEventListener("input", (e) => {
+      document.getElementById("segThreshVal").textContent = e.target.value;
+      runSegmentation();
+    });
+
+    document.getElementById("gaussianPre").addEventListener("change", runSegmentation);
+
+    // Инициализация
+    populateSubMethods();
+    generatePresetImage("primitives");
+  </script>
+</body>
+</html>
