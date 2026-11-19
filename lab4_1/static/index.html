@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Лабораторная работа №4 — Отсечение отрезков и многоугольников (Вариант 9)</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <h1>Отсечение (Вариант 9)</h1>
+      <p class="sub">Python + Canvas: средняя точка и Сазерленд–Ходжмен</p>
+
+      <div class="tabs">
+        <button class="tab-btn active" data-mode="segments">1. Отрезки (Средняя точка)</button>
+        <button class="tab-btn" data-mode="polygon">2. Многоугольник</button>
+      </div>
+
+      <div class="group">
+        <label>Загрузить входной файл (.txt)</label>
+        <label class="upload-btn">
+          Выбрать файл
+          <input type="file" id="fileInput" accept=".txt,text/plain" />
+        </label>
+      </div>
+
+      <div class="group">
+        <label for="dataTextarea" id="formatLabel">Данные (n, отрезки, окно):</label>
+        <textarea id="dataTextarea" rows="11" spellcheck="false"></textarea>
+      </div>
+
+      <div class="row">
+        <button class="btn primary" id="runBtn">Выполнить отсечение</button>
+        <button class="btn" id="sampleBtn">Пример</button>
+      </div>
+
+      <div class="group" id="epsGroup">
+        <label>Точность ε (средняя точка): <span id="epsVal">0.001</span></label>
+        <input type="range" id="epsSlider" min="0.0001" max="0.2" step="0.0005" value="0.001" />
+      </div>
+
+      <label class="check-row" id="midChkRow">
+        <input type="checkbox" id="showMidpoints" checked />
+        Показать точки разбиения (средние точки)
+      </label>
+
+      <div class="row">
+        <button class="btn" id="fitBtn">Подогнать масштаб</button>
+        <button class="btn" id="resetCamBtn">Центр (0,0)</button>
+      </div>
+
+      <div class="legend">
+        <div><span class="swatch win"></span> Отсекающее окно</div>
+        <div><span class="swatch orig"></span> Исходные отрезки / многоугольник</div>
+        <div><span class="swatch vis"></span> Видимые части (после отсечения)</div>
+      </div>
+
+      <div id="errorBox" class="error-box" style="display:none;"></div>
+    </aside>
+
+    <main class="main-area">
+      <div class="canvas-card">
+        <div class="toolbar">
+          <span id="modeTitle">Часть 1: Алгоритм средней точки</span>
+          <span class="badge" id="cursorBadge">(x, y): —</span>
+          <span class="badge" id="scaleBadge">Масштаб: — px/ед.</span>
+          <span class="badge" id="timeBadge">Время (Python): — мкс</span>
+          <span class="badge" id="extraBadge"></span>
+        </div>
+        <canvas id="sceneCanvas"></canvas>
+      </div>
+
+      <div class="table-card">
+        <h3 id="tableTitle">Результаты отсечения</h3>
+        <div class="table-wrap">
+          <table id="resultTable">
+            <thead></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
